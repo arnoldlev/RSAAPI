@@ -27,8 +27,10 @@ namespace RSAAPI
             app.UseAuthorization();
 
 
-            app.MapControllers();
+            // Define a simple health check endpoint
+            app.MapGet("/health", () => Results.Ok("Application is healthy"));
 
+            app.MapControllers();
             app.Run();
         }
     }

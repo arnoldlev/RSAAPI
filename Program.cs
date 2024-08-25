@@ -1,3 +1,7 @@
+using RSAAPI.Abstracts;
+using RSAAPI.Services;
+using System.Net.Security;
+
 namespace RSAAPI
 {
     public class Program
@@ -7,9 +11,8 @@ namespace RSAAPI
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
+            builder.Services.AddHttpClient<ILicenseService, LicenseService>();
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -22,14 +25,8 @@ namespace RSAAPI
                 app.UseSwaggerUI();
             }
 
-           // app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
-
-            // Define a simple health check endpoint
             app.MapGet("/health", () => Results.Ok("Application is healthy"));
-
             app.MapControllers();
             app.Run();
         }

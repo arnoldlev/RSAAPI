@@ -8,8 +8,12 @@ using RSAAPI.Abstracts;
 using RSAAPI.Database;
 using RSAAPI.Services;
 using Microsoft.Data.SqlClient;
-using System.Net.Security;
-using System.Security.Claims;
+using Amazon.S3;
+using Amazon.SecretsManager;
+using Newtonsoft.Json.Linq;
+using System.Security;
+using Amazon.Extensions.NETCore.Setup;
+using Amazon;
 
 namespace RSAAPI
 {
@@ -36,19 +40,13 @@ namespace RSAAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            string partialConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            string dbServer = Environment.GetEnvironmentVariable("Name"); // The server name or address
-            string dbPassword = Environment.GetEnvironmentVariable("DB"); // The database password
-
-            // Build the full connection string dynamically
-            var sqlConnectionStringBuilder = new SqlConnectionStringBuilder(partialConnectionString)
+            //builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+            builder.Services.AddDefaultAWSOptions(new AWSOptions
             {
-                DataSource = dbServer,  // Set the server
-                Password = dbPassword    // Set the password
-            };
-
-            builder.Services.AddDbContext<RSAContext>(options =>
-                options.UseSqlServer(sqlConnectionStringBuilder.ConnectionString));
+                Region = RegionEndpoint.USWest2 // Specify your region here
+            });
+            builder.Services.AddAWSService<IAmazonS3>();
+            builder.Services.AddAWSService<IAmazonSecretsManager>();
 
             // Configure JWT Bearer Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -99,18 +97,19 @@ namespace RSAAPI
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAllOrigins",
-                        builder =>
-                        {
-                            builder.AllowAnyOrigin();
-                            builder.AllowAnyHeader();
-                            builder.AllowAnyMethod();
-                        });
+                    builder =>
+                    {
+                        builder.AllowAnyOrigin();
+                        builder.AllowAnyHeader();
+                        builder.AllowAnyMethod();
+                    });
             });
 
 
             // Add services to the container.
             builder.Services.AddHttpClient<ILicenseService, LicenseService>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<ISecretService, SecretService>();
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -144,10 +143,27 @@ namespace RSAAPI
                 });
             });
 
+
+            builder.Services.AddDbContext<RSAContext>((serviceProvider, options) =>
+            {
+                string partialConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+                var secretManagerService = serviceProvider.GetRequiredService<ISecretService>();
+                var secretJson = secretManagerService.GetSecretValueAsync("prod/Store").GetAwaiter().GetResult();
+                var secret = JObject.Parse(secretJson);   
+
+                var sqlConnectionStringBuilder = new SqlConnectionStringBuilder(partialConnectionString)
+                {
+                    DataSource = secret["SOURCE"]?.ToString(),  
+                    Password = secret["PASS"]?.ToString()    
+                };
+
+                options.UseSqlServer(sqlConnectionStringBuilder.ConnectionString);
+            });
+
             var app = builder.Build();
 
             app.UseCors("AllowAllOrigins");
-            // Configure the HTTP request pipeline.
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

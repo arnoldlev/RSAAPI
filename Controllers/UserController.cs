@@ -34,7 +34,7 @@ namespace RSAAPI.Controllers
                     {
                         Email = userEmail,
                         ApiToken = result.ApiToken,
-                        SandBoxToken = result.SandBoxToken,
+                        SandboxToken = result.SandBoxToken,
                         LicenseKey = result.LicenseKey
                     }
             );
@@ -64,8 +64,8 @@ namespace RSAAPI.Controllers
             var userEmail = User.Claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
             if (userEmail == null) return NotFound();
 
-            await _userService.SaveUserAsync(userEmail, userDto);
-            return Ok();
+            var result = await _userService.SaveUserAsync(userEmail, userDto);
+            return Ok(result);
 
         }
 

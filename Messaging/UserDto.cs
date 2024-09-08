@@ -5,6 +5,6 @@
         public string? Email { get; set; }
         public string? LicenseKey { get; set; }
         public string? ApiToken { get; set; }
-        public string? SandBoxToken { get; set; }
+        public string? SandboxToken { get; set; }
     }
 }

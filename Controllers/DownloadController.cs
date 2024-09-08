@@ -19,13 +19,26 @@ namespace RSAAPI.Controllers
         [HttpGet("generate-url/{platform}")]
         public IActionResult GeneratePresignedUrl(string platform)
         {
-            string keyName = platform == "mac" ? "RSABotMAC.zip" : "RSABotWindows.zip";
+            string keyName;
+
+            if (platform == "macarm")
+            {
+                keyName = "RSABotMACARM.zip";
+            }
+            else if (platform == "macintel")
+            {
+                keyName = "RSABotMACIntel.zip";
+            }
+            else
+            {
+                keyName = "RSABotWindows.zip";
+            }
 
             var request = new GetPreSignedUrlRequest
             {
                 BucketName = BucketName,
                 Key = keyName,
-                Expires = DateTime.UtcNow.AddMinutes(15)
+                Expires = DateTime.UtcNow.AddMinutes(5)
             };
 
             string url = _s3Client.GetPreSignedURL(request);

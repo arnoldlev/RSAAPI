@@ -7,6 +7,6 @@ namespace RSAAPI.Abstracts
     {
         Task<DbUser> GetOrCreateUser(string email);
 
-        Task SaveUserAsync(string email, UserDto user);
+        Task<UserDto> SaveUserAsync(string email, UserDto user);
     }
 }

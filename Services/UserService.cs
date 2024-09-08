@@ -1,7 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Amazon.Runtime;
+using Microsoft.EntityFrameworkCore;
 using RSAAPI.Abstracts;
 using RSAAPI.Database;
 using RSAAPI.Messaging;
+using RSAAPI.Migrations;
 using RSAAPI.Models;
 
 namespace RSAAPI.Services
@@ -27,16 +29,17 @@ namespace RSAAPI.Services
         }
         //new UserDto { Email = email, SandBoxToken = dbuser.SandBoxToken, ApiToken = dbuser.ApiToken, LicenseKey = dbuser.LicenseKey };
 
-        public async Task SaveUserAsync(string email, UserDto user)
+        public async Task<UserDto> SaveUserAsync(string email, UserDto user)
         {
             var result = await GetOrCreateUser(email);
 
             result.ModifiedDate = DateTime.Now;
             result.LicenseKey = user.LicenseKey ?? result.LicenseKey;
             result.ApiToken = user.ApiToken ?? result.ApiToken;
-            result.SandBoxToken = user.SandBoxToken ?? result.SandBoxToken;
+            result.SandBoxToken = user.SandboxToken ?? result.SandBoxToken;
 
             await _context.SaveChangesAsync();
+            return new UserDto { Email = email, SandboxToken = result.SandBoxToken, ApiToken = result.ApiToken };
         }
     }
 }

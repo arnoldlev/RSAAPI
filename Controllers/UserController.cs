@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RSAAPI.Abstracts;
+using RSAAPI.Services;
 using RSAAPI.Messaging;
 using System.ComponentModel.DataAnnotations;
 
@@ -14,11 +15,13 @@ namespace RSAAPI.Controllers
     {
         private readonly IUserService _userService;
         private readonly ILicenseService _licenseService;
+        private readonly EncryptionService _encryptionService;
 
-        public UserController(IUserService userService, ILicenseService licenseService)
+        public UserController(IUserService userService, ILicenseService licenseService, EncryptionService encryptionService)
         {
             _userService = userService;
             _licenseService = licenseService;
+            _encryptionService = encryptionService;
         }
 
         [HttpGet("profile")]
@@ -33,8 +36,8 @@ namespace RSAAPI.Controllers
             return Ok(new UserDto
                     {
                         Email = userEmail,
-                        ApiToken = result.ApiToken,
-                        SandboxToken = result.SandBoxToken,
+                        ApiToken = (result.ApiToken != null) ? await _encryptionService.DecryptData(result.ApiToken) : null,
+                        SandboxToken = (result.SandBoxToken != null) ? await _encryptionService.DecryptData(result.SandBoxToken) : null,
                         LicenseKey = result.LicenseKey
                     }
             );

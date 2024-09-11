@@ -11,42 +11,25 @@ using Microsoft.Data.SqlClient;
 using Amazon.S3;
 using Amazon.SecretsManager;
 using Newtonsoft.Json.Linq;
-using System.Security;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon;
+using Amazon.KeyManagementService;
 
 namespace RSAAPI
 {
     public class Program
     {
-        public static byte[] Base64UrlDecode(string base64Url)
-        {
-            // Replace URL-specific characters
-            string base64 = base64Url.Replace('-', '+').Replace('_', '/');
-
-            // Pad with '=' to make the string length a multiple of 4
-            switch (base64.Length % 4)
-            {
-                case 2: base64 += "=="; break;
-                case 3: base64 += "="; break;
-            }
-
-            // Decode the Base64 string to a byte array
-            return Convert.FromBase64String(base64);
-        }
-
-
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            //builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
             builder.Services.AddDefaultAWSOptions(new AWSOptions
             {
                 Region = RegionEndpoint.USWest2 // Specify your region here
             });
             builder.Services.AddAWSService<IAmazonS3>();
             builder.Services.AddAWSService<IAmazonSecretsManager>();
+            builder.Services.AddAWSService<IAmazonKeyManagementService>();
 
             // Configure JWT Bearer Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -62,7 +45,6 @@ namespace RSAAPI
                         ValidAudience = builder.Configuration["AWS:ClientId"],
                         IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
                         {
-                            // Fetch the JSON Web Key Set (JWKS) from the Cognito issuer.
                             var jwksUrl = $"{parameters.ValidIssuer}/.well-known/jwks.json";
                             var httpClient = new HttpClient();
                             var response = httpClient.GetAsync(jwksUrl).Result;
@@ -88,7 +70,6 @@ namespace RSAAPI
                     {
                         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
                         logger.LogInformation("Token validated for {Principal}", context.Principal);
-
                         return Task.CompletedTask;
                     }
                 };
@@ -107,6 +88,14 @@ namespace RSAAPI
 
 
             // Add services to the container.
+            builder.Services.AddSingleton<EncryptionService>(provider =>
+            {
+                var kmsClient = provider.GetRequiredService<IAmazonKeyManagementService>();
+                string keyArn = builder.Configuration["AWS:Key"];
+                return new EncryptionService(keyArn, kmsClient);
+            });
+
+
             builder.Services.AddHttpClient<ILicenseService, LicenseService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ISecretService, SecretService>();
@@ -138,7 +127,7 @@ namespace RSAAPI
                                 Id = "Bearer"
                             }
                         },
-                        new string[]{ }
+                        Array.Empty<string>()
                     }
                 });
             });
@@ -163,7 +152,6 @@ namespace RSAAPI
             var app = builder.Build();
 
             app.UseCors("AllowAllOrigins");
-
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

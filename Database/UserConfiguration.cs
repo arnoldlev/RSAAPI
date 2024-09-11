@@ -22,8 +22,7 @@ namespace RSAAPI.Database
 
             builder.Property<DateTime>("ModifiedDate")
                 .IsRequired()
-                .HasDefaultValue(DateTime.Now)
-                .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+                .HasDefaultValue(DateTime.Now);
         }
     }
 }

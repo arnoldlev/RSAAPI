@@ -11,10 +11,12 @@ namespace RSAAPI.Services
     public class UserService : IUserService
     {
         private readonly RSAContext _context;
+        private readonly EncryptionService _encryptionService;
 
-        public UserService(RSAContext context)
+        public UserService(RSAContext context, EncryptionService encryptionService)
         {
             _context = context;
+            _encryptionService = encryptionService;
         }
 
         public async Task<DbUser> GetOrCreateUser(string email)
@@ -24,7 +26,7 @@ namespace RSAAPI.Services
                 dbuser = new DbUser() { Email = email };
                 await _context.AddAsync(dbuser);
                 await _context.SaveChangesAsync();
-            }
+            } 
             return dbuser;
         }
         //new UserDto { Email = email, SandBoxToken = dbuser.SandBoxToken, ApiToken = dbuser.ApiToken, LicenseKey = dbuser.LicenseKey };
@@ -35,11 +37,13 @@ namespace RSAAPI.Services
 
             result.ModifiedDate = DateTime.Now;
             result.LicenseKey = user.LicenseKey ?? result.LicenseKey;
-            result.ApiToken = user.ApiToken ?? result.ApiToken;
-            result.SandBoxToken = user.SandboxToken ?? result.SandBoxToken;
-
+            result.ApiToken = (user.ApiToken != null && user.ApiToken.Length > 1) ? 
+                                await _encryptionService.EncryptData(user.ApiToken) : result.ApiToken;
+            result.SandBoxToken = (user.SandboxToken != null && user.SandboxToken.Length > 1) ?
+                                await _encryptionService.EncryptData(user.SandboxToken) : result.SandBoxToken;
+            
             await _context.SaveChangesAsync();
-            return new UserDto { Email = email, SandboxToken = result.SandBoxToken, ApiToken = result.ApiToken };
+            return new UserDto { Email = email };
         }
     }
 }

@@ -14,6 +14,7 @@ using Newtonsoft.Json.Linq;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon;
 using Amazon.KeyManagementService;
+using Amazon.CognitoIdentityProvider;
 
 namespace RSAAPI
 {
@@ -25,11 +26,12 @@ namespace RSAAPI
 
             builder.Services.AddDefaultAWSOptions(new AWSOptions
             {
-                Region = RegionEndpoint.USWest2 // Specify your region here
+                Region = RegionEndpoint.USWest2 
             });
             builder.Services.AddAWSService<IAmazonS3>();
             builder.Services.AddAWSService<IAmazonSecretsManager>();
             builder.Services.AddAWSService<IAmazonKeyManagementService>();
+            builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
 
             // Configure JWT Bearer Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -99,11 +101,13 @@ namespace RSAAPI
             builder.Services.AddHttpClient<ILicenseService, LicenseService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ISecretService, SecretService>();
+            builder.Services.AddScoped<AuthService>();
+
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                c.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Title = "RSAAPI"
                 });
